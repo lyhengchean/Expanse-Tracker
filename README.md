@@ -1,90 +1,91 @@
-# Ledger — Setup Guide
+# Ledger v3 — Setup Guide
 
-A pure frontend expense tracker that writes directly to your Google Sheet. Host on GitHub Pages, free forever.
+A pure frontend expense + income tracker that writes directly to your Google Sheet. Host on GitHub Pages, free forever.
 
-## What you get
+## What's new in v3
 
-- `index.html` — the frontend (drop into a GitHub repo)
-- `Code.gs` — the Google Apps Script backend
+- **Income tracking** — got paid? click **Add income** to bump your wallet up. Logged as an entry with type `income`, color-coded blue (↑).
+- **Update wallet** is now strictly for **overwriting** the total (a fresh start). Income is the additive action.
+- **Activity grouped by day** with sticky day headers (Today, Yesterday, etc.) and per-day net totals (+$50 / −$12.50).
+- **Year + Month filters** so old data stays browsable. Pick "All months" to see a whole year.
+- **Jump-to-Today button** snaps the filter back to the current month instantly.
+- On every **page refresh**, the filter auto-resets to the current month (and the date input defaults to today).
+- **Split into 3 files**: `index.html`, `styles.css`, `script.js` for clean editing.
 
-## Step 1 — Create your Google Sheet
+## Files
 
-1. Go to [sheets.google.com](https://sheets.google.com) and create a **new blank spreadsheet**.
-2. Name it something like **"My Expenses"**.
-3. You don't need to add any columns — the script will create them.
+| File | What's in it |
+|---|---|
+| `index.html` | Page structure only — links to CSS and JS |
+| `styles.css` | All styling (dark + light theme, animations) |
+| `script.js` | All app logic (state, API calls, filters, render) |
+| `Code.gs` | Apps Script backend — paste into Google Apps Script |
+| `README.md` | This file |
 
-## Step 2 — Add the Apps Script
+## Step 1 — Update your Apps Script
 
-1. In your sheet, click **Extensions → Apps Script**.
-2. Delete the default `Code.gs` content.
-3. Paste the contents of `Code.gs` from this project.
-4. Click the **save** icon (💾). Name the project anything, e.g. "Ledger Backend".
+1. Open your Google Sheet → **Extensions → Apps Script**.
+2. **Replace** the existing `Code.gs` with the new one from this project.
+3. Click save (💾).
+4. **Deploy → Manage deployments → ✏️ edit (pencil) → Version: New version → Deploy**.
+5. Same URL keeps working. No need to re-paste in the frontend.
 
-## Step 3 — Deploy as a Web App
+The new script auto-adds a `Type` column to your existing Expenses sheet. Old rows without a type are treated as expenses, so nothing breaks.
 
-1. In the Apps Script editor, click **Deploy → New deployment**.
-2. Click the gear icon next to "Select type" → choose **Web app**.
-3. Fill in:
-   - **Description**: Ledger v1
-   - **Execute as**: **Me** (your email)
-   - **Who has access**: **Anyone**
-4. Click **Deploy**.
-5. Google will ask for permissions — click **Authorize access**, pick your account, click **Advanced → Go to (project name) (unsafe) → Allow**. (It says "unsafe" because it's your own script, not verified by Google. It is safe; only you wrote it.)
-6. Copy the **Web app URL**. It looks like:
-   `https://script.google.com/macros/s/AKfycby.../exec`
+## Step 2 — Upload the three frontend files to GitHub
 
-> ⚠️ Save this URL. You'll paste it into the frontend.
+If your repo is already set up:
 
-## Step 4 — Test the frontend locally
+1. Upload `index.html`, `styles.css`, and `script.js` to the **root** of your repo (replace any older ones).
+2. Commit. GitHub Pages updates automatically in ~30 seconds.
 
-1. Open `index.html` in your browser (just double-click it).
-2. Paste the Web app URL into the input at the top and click **Save URL**.
-3. Add a test expense. Open your Google Sheet — a new row should appear in the **Expenses** tab.
+If starting fresh, follow the v1 README steps but upload all three files instead of just one.
 
-## Step 5 — Host on GitHub Pages
-
-1. Create a new public repository on GitHub, e.g. `expense-tracker`.
-2. Upload `index.html` to the repo root.
-3. Go to **Settings → Pages**.
-4. Under "Branch", select `main` and folder `/ (root)`. Click **Save**.
-5. Wait ~1 minute. Your site will be live at:
-   `https://YOUR_USERNAME.github.io/expense-tracker/`
-6. Open it, paste your Apps Script URL, save — done.
-
-## How it works
-
-```
-┌──────────────────────┐    fetch()    ┌───────────────────┐
-│  GitHub Pages (UI)   │ ────────────▶ │  Apps Script URL  │
-│  index.html + JS     │ ◀──────────── │  doGet / doPost   │
-└──────────────────────┘    JSON       └─────────┬─────────┘
-                                                 │
-                                                 ▼
-                                       ┌───────────────────┐
-                                       │  Google Sheet     │
-                                       │  Expenses + Stats │
-                                       └───────────────────┘
+⚠️ Important: all three files must sit in the **same folder**, because `index.html` references them by relative path:
+```html
+<link rel="stylesheet" href="styles.css">
+<script src="script.js"></script>
 ```
 
-- The Web app URL acts as your **secret endpoint** — anyone who has it can write to your sheet, but it's a long random string.
-- No service account, no API key in your frontend code, nothing leaked on GitHub.
-- The frontend stores your URL in `localStorage`, so each device just needs it pasted once.
+## Step 3 — Test it
 
-## Updating the script later
+1. Open your GitHub Pages URL.
+2. The page should load with this month already filtered, today's date pre-filled in the form, and your existing entries grouped by day.
+3. Try **Add income** with $100 — wallet should grow by $100, and a blue ↑ entry should appear under today.
+4. Try **Update wallet** with $500 — wallet should become exactly $500 (overwrites, doesn't add).
+5. Change the **Year** or **Month** filter to view past data.
+6. Click **Today** in the filter bar to snap back.
 
-If you change `Code.gs`:
-- **Deploy → Manage deployments → ✏️ edit → Version: New version → Deploy**.
-- The same URL keeps working.
+## Activity grouping logic
 
-## Optional ideas you can add later
+- Filter by **Year + Month** (or pick "All months" for a full year).
+- Within the view, entries are grouped by **day**, newest day first.
+- Each day shows: weekday + date, relative label (Today / Yesterday), and the **net for that day** (positive = green income, negative = red expense).
+- Within a day: income shown first (↑ blue), then expenses (↓ red).
 
-- Categories (Food, Transport, etc.) — add a column in the sheet and a dropdown in the form.
-- Monthly summaries — a chart in the sheet itself, or a new view in the UI.
-- Multi-currency — add a "Currency" column.
-- Edit / delete entries — add `doPost` actions `edit` and `delete` that take a row index.
+## Income vs Update wallet — quick mental model
 
-## Security notes
+| Action | What it does | Logged as entry? |
+|---|---|---|
+| **Add income** | wallet `+=` amount | ✅ Yes (type: income) |
+| **Update wallet** | wallet `=` amount | ❌ No (just resets the number) |
+| **Record expense** | spending logged | ✅ Yes (type: expense) |
 
-- The Web app URL is a shared secret. Don't commit it to GitHub or post it publicly.
-- Anyone with the URL can add rows. If that ever happens, redeploy to get a new URL (Deploy → New deployment).
-- Your sheet stays private to your Google account; the Apps Script runs *as you*, so it has permission to edit *your* sheet without exposing your credentials.
+The hero **Available balance** is calculated as:
+```
+available = wallet − sum(all expenses)
+```
+Income adds to wallet directly, so it shows up in your available balance immediately.
+
+## Optional ideas for later
+
+- Categories (Food, Transport, Bills) — add a column to the sheet + dropdown to the form.
+- Delete / edit entries — add `delete` and `edit` actions to the Apps Script.
+- Export to CSV — already built in via the Google Sheet itself (File → Download → CSV).
+- Multi-currency — add a currency column and a converter.
+
+## Security reminder
+
+The Apps Script Web App URL is a shared secret. Don't commit it to a public repo unless you're okay with anyone who finds it being able to write rows. If that ever happens, redeploy under a new version (Deploy → New deployment) for a fresh URL.
+
+Your sheet stays private to your Google account.
