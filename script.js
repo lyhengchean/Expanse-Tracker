@@ -1,13 +1,16 @@
 // ============ CONFIG ============
 // Apps Script Web App URL — baked in.
-const API_URL = 'https://script.google.com/macros/s/AKfycbzPUs1wqxA3FY3kZ3N5z98OBvnXpj5H0vXfVXwMEsewtwh3RNyYou1coDfgT3YyYy3vfQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxw5CtKmP60qWdH08msuwjvSy5LTe5R73Mpr9TD6YcxydFfMOI9OCgz_jNClLInO7I4Aw/exec';
 
 // ============ STATE ============
-let entries = [];          // all entries (expenses + income), unified
+let entries = [];
 let availableAmount = 0;
-let currentFilter = { year: null, month: null }; // null month = "All"
+let currentFilter = { year: null, month: null };
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// Description keywords that hint at income (defensive fallback if Type column is blank)
+const INCOME_HINTS = ['salary','income','paycheck','wage','bonus','refund','gift','freelance'];
 
 // ============ ELEMENTS ============
 const dateInput   = document.getElementById('dateInput');
@@ -84,27 +87,23 @@ function init() {
   todayLabel.textContent = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   dateInput.value = localDateString(now);
 
-  // Default filter to current year + month
   currentFilter.year = now.getFullYear();
-  currentFilter.month = now.getMonth(); // 0-indexed
+  currentFilter.month = now.getMonth();
 
   refreshBtn.addEventListener('click', () => loadEntries(true));
   submitBtn.addEventListener('click', submitEntry);
   document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
-  // Wallet modal
   walletBtn.addEventListener('click', openWalletModal);
   walletSave.addEventListener('click', saveWallet);
   walletInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveWallet(); });
 
-  // Income modal
   incomeBtn.addEventListener('click', openIncomeModal);
   incomeSave.addEventListener('click', saveIncome);
   [incomeAmount, incomeSource].forEach(el => {
     el.addEventListener('keydown', e => { if (e.key === 'Enter') saveIncome(); });
   });
 
-  // Modal close buttons (both modals via data-close)
   document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', () => closeModal(btn.dataset.close));
   });
@@ -118,7 +117,6 @@ function init() {
     }
   });
 
-  // Wallet preset buttons (SET behavior)
   document.querySelectorAll('.preset-btn[data-set]').forEach(btn => {
     btn.addEventListener('click', () => {
       walletInput.value = parseFloat(btn.dataset.set).toFixed(2);
@@ -126,7 +124,6 @@ function init() {
     });
   });
 
-  // Income preset buttons (ADD behavior — fills with the preset amount)
   document.querySelectorAll('.preset-btn[data-income]').forEach(btn => {
     btn.addEventListener('click', () => {
       const add = parseFloat(btn.dataset.income) || 0;
@@ -136,7 +133,6 @@ function init() {
     });
   });
 
-  // Filter events
   yearFilter.addEventListener('change', () => {
     currentFilter.year = parseInt(yearFilter.value, 10);
     rebuildMonthFilter();
@@ -149,12 +145,10 @@ function init() {
   });
   jumpTodayBtn.addEventListener('click', jumpToToday);
 
-  // Form submission via Enter
   [descInput, amountInput].forEach(el => {
     el.addEventListener('keydown', e => { if (e.key === 'Enter') submitEntry(); });
   });
 
-  // Restore last-used filter from session if any (resets per session — page refresh defaults to today)
   loadEntries();
 }
 
@@ -164,7 +158,6 @@ function jumpToToday() {
   currentFilter.month = now.getMonth();
   rebuildFilters();
   render();
-  // Scroll ledger to top
   ledgerEl.scrollTop = 0;
 }
 
@@ -186,6 +179,24 @@ function setSyncStatus(state) {
   } else {
     heroStatus.innerHTML = '<span style="color:var(--accent)">●</span> Synced';
   }
+}
+
+// ============ DEFENSIVE TYPE CLASSIFIER ============
+// If the sheet's Type column is blank/garbage (old rows, manual edits),
+// classify the entry by description hints so the UI still shows it right.
+function classifyType(entry) {
+  const explicit = String(entry.type || '').toLowerCase().trim();
+  if (explicit === 'income') return 'income';
+  if (explicit === 'expense') return 'expense';
+
+  // Fallback: scan description
+  const desc = String(entry.description || '').toLowerCase();
+  for (const hint of INCOME_HINTS) {
+    if (desc.includes(hint)) return 'income';
+  }
+  // Negative amount in sheet → treat as income (cash in)
+  if (Number(entry.amount) < 0) return 'income';
+  return 'expense';
 }
 
 // ============ MODAL CONTROLS ============
@@ -254,7 +265,7 @@ async function saveWallet() {
 // ============ INCOME (ADD to wallet, log entry) ============
 async function saveIncome() {
   const val = parseFloat(incomeAmount.value);
-  const source = incomeSource.value.trim() || 'Income';
+  const source = incomeSource.value.trim() || 'Salary';
   if (isNaN(val) || val <= 0) {
     incomeStatus.textContent = 'Enter a valid amount';
     incomeStatus.className = 'status err';
@@ -308,7 +319,6 @@ async function loadEntries(manual) {
     entries = data.entries || [];
     availableAmount = Number(data.available || 0);
     setSyncStatus('synced');
-    // Reset filter to current month on every load (page refresh -> today)
     if (manual) {
       const now = new Date();
       currentFilter.year = now.getFullYear();
@@ -360,7 +370,6 @@ async function submitEntry() {
     availableAmount = Number(data.available || availableAmount);
     setSyncStatus('synced');
 
-    // Snap filter to the date that was just added (likely current month)
     const d = new Date(date);
     if (!isNaN(d)) {
       currentFilter.year = d.getFullYear();
@@ -378,7 +387,6 @@ async function submitEntry() {
 
 // ============ FILTER REBUILD ============
 function rebuildFilters() {
-  // Years present in data + current year
   const yearsSet = new Set();
   const now = new Date();
   yearsSet.add(now.getFullYear());
@@ -388,7 +396,6 @@ function rebuildFilters() {
   });
   const years = [...yearsSet].sort((a, b) => b - a);
 
-  // Ensure currentFilter.year is in the list
   if (!years.includes(currentFilter.year)) {
     currentFilter.year = years[0];
   }
@@ -398,13 +405,10 @@ function rebuildFilters() {
   ).join('');
 
   rebuildMonthFilter();
-
-  // Show filters once we have data
   filtersEl.style.display = entries.length ? 'flex' : 'none';
 }
 
 function rebuildMonthFilter() {
-  // Months in the selected year that have entries + the current month (if same year)
   const monthsSet = new Set();
   const now = new Date();
   if (now.getFullYear() === currentFilter.year) monthsSet.add(now.getMonth());
@@ -414,9 +418,8 @@ function rebuildMonthFilter() {
     if (!isNaN(d) && d.getFullYear() === currentFilter.year) monthsSet.add(d.getMonth());
   });
 
-  const months = [...monthsSet].sort((a, b) => b - a); // newest first
+  const months = [...monthsSet].sort((a, b) => b - a);
 
-  // Ensure currentFilter.month is valid for this year (or fall back to most recent)
   if (currentFilter.month !== null && !months.includes(currentFilter.month)) {
     currentFilter.month = months[0] ?? new Date().getMonth();
   }
@@ -430,9 +433,11 @@ function rebuildMonthFilter() {
 
 // ============ RENDER ============
 function render() {
-  // Total spent (expenses only) — ALL TIME, used for stats hero
-  const allExpenses = entries.filter(e => e.type !== 'income');
-  const totalSpent = allExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  // Pre-classify every entry with the defensive classifier
+  const classified = entries.map(e => ({ ...e, _type: classifyType(e) }));
+
+  const allExpenses = classified.filter(e => e._type === 'expense');
+  const totalSpent = allExpenses.reduce((s, e) => s + Math.abs(Number(e.amount || 0)), 0);
   const remaining = availableAmount - totalSpent;
 
   // Hero
@@ -442,28 +447,27 @@ function render() {
   heroAmount.className = 'hero-amount ' + (remaining < 0 ? 'negative' : 'positive');
 
   heroTotal.textContent = '$' + totalSpent.toFixed(2);
-  heroCount.textContent = entries.length;
+  heroCount.textContent = classified.length;
   statBudget.textContent = availableAmount.toFixed(2);
 
   // Today stat
   const todayStr = localDateString(new Date());
   const todayExpenses = allExpenses.filter(e => normalizeDate(e.date) === todayStr);
-  const todaySum = todayExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const todaySum = todayExpenses.reduce((s, e) => s + Math.abs(Number(e.amount || 0)), 0);
   statToday.textContent = todaySum.toFixed(2);
   statTodayFoot.textContent = todayExpenses.length
     ? `${todayExpenses.length} transaction${todayExpenses.length === 1 ? '' : 's'}`
     : 'No spending yet';
 
-  // This month stat (current real-world month, regardless of filter)
+  // This month stat
   const now = new Date();
   const ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
   const monthExpenses = allExpenses.filter(e => normalizeDate(e.date).startsWith(ym));
-  const monthSum = monthExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const monthSum = monthExpenses.reduce((s, e) => s + Math.abs(Number(e.amount || 0)), 0);
   statMonth.textContent = monthSum.toFixed(2);
   statMonthFoot.textContent = now.toLocaleDateString(undefined, { month: 'long' });
 
-  // Empty state
-  if (!entries.length) {
+  if (!classified.length) {
     filtersEl.style.display = 'none';
     ledgerEl.innerHTML = `
       <div class="ledger-empty">
@@ -474,11 +478,9 @@ function render() {
     return;
   }
 
-  // Build filter dropdowns
   rebuildFilters();
 
-  // Filter entries by year + (optional) month
-  const filtered = entries.filter(e => {
+  const filtered = classified.filter(e => {
     const d = new Date(e.date);
     if (isNaN(d)) return false;
     if (d.getFullYear() !== currentFilter.year) return false;
@@ -486,7 +488,6 @@ function render() {
     return true;
   });
 
-  // Group by day (YYYY-MM-DD)
   const byDay = {};
   filtered.forEach(e => {
     const key = normalizeDate(e.date);
@@ -494,15 +495,14 @@ function render() {
     byDay[key].push(e);
   });
 
-  const dayKeys = Object.keys(byDay).sort((a, b) => b.localeCompare(a)); // newest first
+  const dayKeys = Object.keys(byDay).sort((a, b) => b.localeCompare(a));
 
-  // Subtitle
   const filterLabel = currentFilter.month !== null
     ? `${MONTH_NAMES[currentFilter.month]} ${currentFilter.year}`
     : `${currentFilter.year}`;
   const totalInView = filtered.reduce((s, e) => {
-    const v = Number(e.amount || 0);
-    return s + (e.type === 'income' ? v : -v);
+    const v = Math.abs(Number(e.amount || 0));
+    return s + (e._type === 'income' ? v : -v);
   }, 0);
   entriesSub.textContent = `${filterLabel} · ${filtered.length} entr${filtered.length === 1 ? 'y' : 'ies'} · net ${totalInView >= 0 ? '+' : '−'}$${Math.abs(totalInView).toFixed(2)}`;
 
@@ -515,20 +515,18 @@ function render() {
     return;
   }
 
-  // Build day-grouped HTML
   const html = dayKeys.map(dayKey => {
     const dayEntries = byDay[dayKey].sort((a, b) => {
-      // Sort within day: income first, then expenses (or by amount desc)
-      if (a.type !== b.type) return a.type === 'income' ? -1 : 1;
-      return Number(b.amount || 0) - Number(a.amount || 0);
+      if (a._type !== b._type) return a._type === 'income' ? -1 : 1;
+      return Math.abs(Number(b.amount || 0)) - Math.abs(Number(a.amount || 0));
     });
 
     const d = new Date(dayKey + 'T00:00:00');
     const dayLabel = d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
     const rel = relativeDay(dayKey);
     const dayNet = dayEntries.reduce((s, e) => {
-      const v = Number(e.amount || 0);
-      return s + (e.type === 'income' ? v : -v);
+      const v = Math.abs(Number(e.amount || 0));
+      return s + (e._type === 'income' ? v : -v);
     }, 0);
 
     const relHtml = rel
@@ -542,12 +540,13 @@ function render() {
         : `<span class="neg">−$${Math.abs(dayNet).toFixed(2)}</span>`;
 
     const entriesHtml = dayEntries.map(e => {
-      const isIncome = e.type === 'income';
+      const isIncome = e._type === 'income';
       const cls = isIncome ? 'income' : 'expense';
       const sign = isIncome ? '+' : '−';
+      // Arrow ICONS — up for income, down for expense (separate paths so SVG isn't reused wrong)
       const tagSvg = isIncome
-        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>';
 
       return `
         <div class="entry">
@@ -555,7 +554,7 @@ function render() {
             <span class="entry-tag ${cls}">${tagSvg}</span>
             ${escapeHtml(e.description || '')}
           </div>
-          <div class="entry-amt ${cls}">${sign}$${Number(e.amount || 0).toFixed(2)}</div>
+          <div class="entry-amt ${cls}">${sign}$${Math.abs(Number(e.amount || 0)).toFixed(2)}</div>
         </div>`;
     }).join('');
 
@@ -588,7 +587,6 @@ function relativeDay(yyyyMmDd) {
   return null;
 }
 
-// Returns yyyy-MM-dd in LOCAL time, not UTC
 function localDateString(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

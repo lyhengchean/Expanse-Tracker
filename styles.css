@@ -28,6 +28,7 @@
   --date-indicator-filter: invert(0.7);
   --shadow-glow: 0 0 30px rgba(180,255,94,0.4);
   --logo-shadow: 0 0 24px rgba(180,255,94,0.4);
+  --sticky-bg: #0a0b10;
 }
 
 :root[data-theme="light"] {
@@ -59,6 +60,7 @@
   --date-indicator-filter: invert(0.3);
   --shadow-glow: 0 4px 20px rgba(77,138,31,0.25);
   --logo-shadow: 0 4px 16px rgba(77,138,31,0.3);
+  --sticky-bg: #f6f7f4;
 }
 
 html { transition: background-color 0.3s ease; }
@@ -109,6 +111,9 @@ body::after {
   margin: 0 auto;
   padding: 40px 24px 80px;
 }
+@media (max-width: 600px) {
+  .wrap { padding: 24px 16px 60px; }
+}
 
 /* ============ HEADER ============ */
 header {
@@ -119,6 +124,9 @@ header {
   flex-wrap: wrap;
   gap: 20px;
   animation: fadeUp 0.6s ease-out;
+}
+@media (max-width: 600px) {
+  header { margin-bottom: 32px; gap: 16px; }
 }
 .logo { display: flex; align-items: center; gap: 12px; }
 .logo-mark {
@@ -222,7 +230,7 @@ header {
 }
 .hero-amount {
   font-family: 'Instrument Serif', serif;
-  font-size: clamp(64px, 12vw, 128px);
+  font-size: clamp(56px, 12vw, 128px);
   line-height: 0.95;
   letter-spacing: -0.04em;
   font-weight: 400;
@@ -241,7 +249,7 @@ header {
 .hero-amount.positive .main { color: var(--text); }
 
 .hero-sub {
-  display: flex; gap: 24px;
+  display: flex; gap: 18px;
   margin-top: 16px;
   flex-wrap: wrap;
   align-items: center;
@@ -264,6 +272,19 @@ header {
   gap: 8px;
   margin-left: auto;
   flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  /* On mobile: push action buttons onto their own row, full width */
+  .hero-actions {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 12px;
+  }
+  .hero-actions .action-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 12px;
+  }
 }
 
 /* ============ ACTION BUTTONS ============ */
@@ -301,7 +322,7 @@ header {
 }
 .income-btn:hover {
   background: var(--income);
-  color: var(--accent-ink);
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
@@ -506,6 +527,7 @@ header {
   position: relative;
   overflow: hidden;
 }
+@media (max-width: 600px) { .card { padding: 20px; } }
 .card-title {
   font-family: 'Instrument Serif', serif;
   font-size: 24px;
@@ -674,6 +696,9 @@ header {
   margin: 0 -28px -28px;
   padding: 0 28px 28px;
 }
+@media (max-width: 600px) {
+  .ledger { margin: 0 -20px -20px; padding: 0 20px 20px; }
+}
 .ledger::-webkit-scrollbar { width: 6px; }
 .ledger::-webkit-scrollbar-track { background: transparent; }
 .ledger::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 3px; }
@@ -708,13 +733,14 @@ header {
   border-bottom: 1px dashed var(--line-strong);
   position: sticky;
   top: 0;
-  background: var(--bg-0);
+  background: var(--sticky-bg);
   z-index: 5;
 }
 .day-header-left {
   display: flex;
   align-items: baseline;
   gap: 10px;
+  flex-wrap: wrap;
 }
 .day-header-date {
   font-family: 'Instrument Serif', serif;
