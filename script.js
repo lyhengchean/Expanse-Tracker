@@ -1,6 +1,6 @@
 // ============ CONFIG ============
 // Apps Script Web App URL — baked in.
-const API_URL = 'https://script.google.com/macros/s/AKfycbxw5CtKmP60qWdH08msuwjvSy5LTe5R73Mpr9TD6YcxydFfMOI9OCgz_jNClLInO7I4Aw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzPUs1wqxA3FY3kZ3N5z98OBvnXpj5H0vXfVXwMEsewtwh3RNyYou1coDfgT3YyYy3vfQ/exec';
 
 // ============ STATE ============
 let entries = [];          // all entries (expenses + income), unified
