@@ -270,6 +270,144 @@
   .arrow-down { color: var(--danger); }
   .arrow-up { color: var(--accent); }
 
+  /* ---------------- WALLET BUTTON ---------------- */
+  .wallet-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 100px;
+    font-family: 'Geist', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .wallet-btn:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+    transform: translateY(-1px);
+  }
+  .wallet-btn:active { transform: translateY(0); }
+  .wallet-btn svg { width: 14px; height: 14px; }
+
+  /* ---------------- MODAL ---------------- */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  :root[data-theme="light"] .modal-backdrop {
+    background: rgba(20,25,30,0.35);
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    border-radius: 20px;
+    padding: 28px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: modalUp 0.25s ease;
+  }
+  @keyframes modalUp {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .modal-head h3 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 26px;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .modal-close {
+    background: var(--surface-hover);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { color: var(--text); background: var(--surface); }
+  .modal-close svg { width: 14px; height: 14px; }
+
+  .modal-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+    line-height: 1.55;
+  }
+
+  .wallet-current {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .wallet-current-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+  }
+  .wallet-current-value {
+    font-family: 'Geist Mono', monospace;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .modal-presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .preset-btn {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    padding: 10px 6px;
+    border-radius: 8px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .preset-btn:active { transform: scale(0.96); }
+
   /* ---------------- STAT CARDS ---------------- */
   .stats {
     display: grid;
@@ -584,6 +722,50 @@
         <span style="color:var(--accent)">●</span>
         Synced
       </div>
+      <button id="walletBtn" class="wallet-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/>
+          <path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/>
+          <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+        </svg>
+        Update wallet
+      </button>
+    </div>
+  </div>
+
+  <!-- WALLET MODAL -->
+  <div id="walletModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="walletModalTitle">
+      <div class="modal-head">
+        <h3 id="walletModalTitle">Update wallet</h3>
+        <button class="modal-close" id="walletClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <p class="modal-desc">How much cash do you have right now? This becomes your new starting balance. Your existing expenses stay logged.</p>
+
+      <div class="wallet-current">
+        <span class="wallet-current-label">Current budget</span>
+        <span class="wallet-current-value">$<span id="walletCurrent">0.00</span></span>
+      </div>
+
+      <div class="field">
+        <label for="walletInput">New wallet amount ($)</label>
+        <input id="walletInput" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal" />
+      </div>
+
+      <div class="modal-presets">
+        <button class="preset-btn" data-add="10">+$10</button>
+        <button class="preset-btn" data-add="20">+$20</button>
+        <button class="preset-btn" data-add="50">+$50</button>
+        <button class="preset-btn" data-add="100">+$100</button>
+      </div>
+
+      <button id="walletSave" class="btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+        Save wallet
+      </button>
+      <div id="walletStatus" class="status"></div>
     </div>
   </div>
 
@@ -643,15 +825,9 @@
         <input id="descInput" type="text" placeholder="Coffee, groceries, taxi..." />
       </div>
 
-      <div class="row">
-        <div class="field">
-          <label for="amountInput">Amount ($)</label>
-          <input id="amountInput" type="number" step="0.01" min="0" placeholder="0.00" />
-        </div>
-        <div class="field">
-          <label for="availInput">Set budget ($)</label>
-          <input id="availInput" type="number" step="0.01" placeholder="optional" />
-        </div>
+      <div class="field">
+        <label for="amountInput">Amount ($)</label>
+        <input id="amountInput" type="number" step="0.01" min="0" placeholder="0.00" inputmode="decimal" />
       </div>
 
       <button id="submitBtn" class="btn">
@@ -701,7 +877,6 @@
   const dateInput   = document.getElementById('dateInput');
   const descInput   = document.getElementById('descInput');
   const amountInput = document.getElementById('amountInput');
-  const availInput  = document.getElementById('availInput');
   const submitBtn   = document.getElementById('submitBtn');
   const refreshBtn  = document.getElementById('refreshBtn');
   const statusEl    = document.getElementById('status');
@@ -721,6 +896,16 @@
   const statMonth  = document.getElementById('statMonth');
   const statTodayFoot = document.getElementById('statTodayFoot');
   const statMonthFoot = document.getElementById('statMonthFoot');
+
+  // Wallet modal
+  const walletBtn    = document.getElementById('walletBtn');
+  const walletModal  = document.getElementById('walletModal');
+  const walletClose  = document.getElementById('walletClose');
+  const walletInput  = document.getElementById('walletInput');
+  const walletSave   = document.getElementById('walletSave');
+  const walletStatus = document.getElementById('walletStatus');
+  const walletCurrent= document.getElementById('walletCurrent');
+  const presetBtns   = document.querySelectorAll('.preset-btn');
 
   // ============ THEME ============
   const THEME_KEY = 'ledger_theme_v1';
@@ -759,7 +944,27 @@
     submitBtn.addEventListener('click', submitEntry);
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
-    [descInput, amountInput, availInput].forEach(el => {
+    // Wallet modal events
+    walletBtn.addEventListener('click', openWalletModal);
+    walletClose.addEventListener('click', closeWalletModal);
+    walletModal.addEventListener('click', (e) => {
+      if (e.target === walletModal) closeWalletModal();
+    });
+    walletSave.addEventListener('click', saveWallet);
+    walletInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveWallet(); });
+    presetBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const add = parseFloat(btn.dataset.add) || 0;
+        const current = parseFloat(walletInput.value) || availableAmount;
+        walletInput.value = (current + add).toFixed(2);
+        walletInput.focus();
+      });
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && walletModal.classList.contains('open')) closeWalletModal();
+    });
+
+    [descInput, amountInput].forEach(el => {
       el.addEventListener('keydown', e => { if (e.key === 'Enter') submitEntry(); });
     });
 
@@ -783,6 +988,56 @@
       heroStatus.innerHTML = '<span style="color:var(--danger)">●</span> Offline';
     } else {
       heroStatus.innerHTML = '<span style="color:var(--accent)">●</span> Synced';
+    }
+  }
+
+  // ============ WALLET MODAL ============
+  function openWalletModal() {
+    walletCurrent.textContent = availableAmount.toFixed(2);
+    walletInput.value = '';
+    walletInput.placeholder = availableAmount.toFixed(2);
+    walletStatus.textContent = '';
+    walletStatus.className = 'status';
+    walletModal.classList.add('open');
+    setTimeout(() => walletInput.focus(), 100);
+  }
+  function closeWalletModal() {
+    walletModal.classList.remove('open');
+  }
+  async function saveWallet() {
+    const val = parseFloat(walletInput.value);
+    if (isNaN(val) || val < 0) {
+      walletStatus.textContent = 'Enter a valid amount';
+      walletStatus.className = 'status err';
+      return;
+    }
+
+    walletSave.disabled = true;
+    walletSave.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg> Saving...';
+    setSyncStatus('syncing');
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'setAvailable', amount: val }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Save failed');
+
+      availableAmount = Number(data.available || val);
+      walletStatus.textContent = 'Saved ✓';
+      walletStatus.className = 'status ok';
+      setSyncStatus('synced');
+      render();
+      setTimeout(closeWalletModal, 600);
+    } catch (e) {
+      walletStatus.textContent = 'Save failed: ' + e.message;
+      walletStatus.className = 'status err';
+      setSyncStatus('error');
+    } finally {
+      walletSave.disabled = false;
+      walletSave.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg> Save wallet';
     }
   }
 
@@ -815,7 +1070,6 @@
     const date   = dateInput.value;
     const desc   = descInput.value.trim();
     const amount = parseFloat(amountInput.value);
-    const newAvail = availInput.value === '' ? null : parseFloat(availInput.value);
 
     if (!date)            return setStatus('Pick a date', 'err');
     if (!desc)            return setStatus('Describe what you spent on', 'err');
@@ -827,7 +1081,6 @@
 
     try {
       const payload = { action: 'add', date, description: desc, amount };
-      if (newAvail !== null && !isNaN(newAvail)) payload.setAvailable = newAvail;
 
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -839,7 +1092,6 @@
 
       descInput.value = '';
       amountInput.value = '';
-      availInput.value = '';
       setStatus('Saved ✓', 'ok');
 
       entries = data.entries || entries;
