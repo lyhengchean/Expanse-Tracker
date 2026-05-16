@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0a0b10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f7f4" media="(prefers-color-scheme: light)">
+<title>Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ---------- DARK (default) ---------- */
+  :root, :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg-0: #0a0b10;
+    --bg-1: #11131c;
+    --bg-2: #161927;
+    --line: rgba(255,255,255,0.06);
+    --line-strong: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --text-dim: #8b91a7;
+    --text-faint: #555a6f;
+    --accent: #b4ff5e;
+    --accent-soft: rgba(180,255,94,0.12);
+    --accent-ink: #0a0b10; /* text color on accent buttons */
+    --danger: #ff7a85;
+    --danger-soft: rgba(255,122,133,0.12);
+    --warn: #ffc46b;
+    --glow-1: rgba(180,255,94,0.08);
+    --glow-2: rgba(122,148,255,0.06);
+    --glow-3: rgba(255,122,200,0.03);
+    --grid-line: rgba(255,255,255,0.015);
+    --surface: rgba(255,255,255,0.025);
+    --surface-hover: rgba(255,255,255,0.04);
+    --input-bg: rgba(255,255,255,0.03);
+    --input-focus-bg: rgba(180,255,94,0.04);
+    --date-indicator-filter: invert(0.7);
+    --shadow-glow: 0 0 30px rgba(180,255,94,0.4);
+    --logo-shadow: 0 0 24px rgba(180,255,94,0.4);
+  }
+
+  /* ---------- LIGHT ---------- */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg-0: #f6f7f4;
+    --bg-1: #ffffff;
+    --bg-2: #eef0eb;
+    --line: rgba(15,22,30,0.08);
+    --line-strong: rgba(15,22,30,0.16);
+    --text: #15181f;
+    --text-dim: #5a6275;
+    --text-faint: #8a92a4;
+    --accent: #4d8a1f;          /* darker green for contrast on light */
+    --accent-soft: rgba(77,138,31,0.1);
+    --accent-ink: #ffffff;       /* white text on green buttons */
+    --danger: #c8323f;
+    --danger-soft: rgba(200,50,63,0.08);
+    --warn: #b97c0a;
+    --glow-1: rgba(77,138,31,0.07);
+    --glow-2: rgba(80,110,200,0.05);
+    --glow-3: rgba(200,120,80,0.04);
+    --grid-line: rgba(15,22,30,0.025);
+    --surface: rgba(255,255,255,0.7);
+    --surface-hover: rgba(255,255,255,0.95);
+    --input-bg: rgba(255,255,255,0.7);
+    --input-focus-bg: rgba(77,138,31,0.05);
+    --date-indicator-filter: invert(0.3);
+    --shadow-glow: 0 4px 20px rgba(77,138,31,0.25);
+    --logo-shadow: 0 4px 16px rgba(77,138,31,0.3);
+  }
+
+  html { transition: background-color 0.3s ease; }
+  html, body, .card, .stat, .field input, .btn, .icon-btn, .date-pill {
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-0);
+    color: var(--text);
+    font-family: 'Geist', -apple-system, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Ambient glow background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 800px 600px at 15% -10%, var(--glow-1), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 85% 100%, var(--glow-2), transparent 60%),
+      radial-gradient(ellipse 500px 400px at 50% 50%, var(--glow-3), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ---------------- HEADER ---------------- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+    gap: 20px;
+    animation: fadeUp 0.6s ease-out;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #ffffff));
+    display: grid; place-items: center;
+    color: var(--accent-ink);
+    font-weight: 700; font-size: 18px;
+    box-shadow: var(--logo-shadow);
+  }
+  .logo-text {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    font-style: italic;
+    letter-spacing: -0.01em;
+  }
+  .logo-text span {
+    color: var(--accent);
+    font-style: normal;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    margin-left: 6px;
+    padding: 2px 8px;
+    background: var(--accent-soft);
+    border-radius: 4px;
+    vertical-align: 0.2em;
+  }
+
+  .date-pill {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    backdrop-filter: blur(20px);
+  }
+  .date-pill .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .date-pill strong { color: var(--text); font-weight: 500; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .theme-toggle {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+  }
+  .theme-toggle:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    transform: rotate(15deg);
+  }
+  .theme-toggle:active { transform: scale(0.92); }
+  .theme-toggle svg {
+    width: 18px; height: 18px;
+    position: absolute;
+    transition: opacity 0.25s, transform 0.4s ease;
+  }
+  /* Dark theme: show sun, hide moon */
+  :root[data-theme="dark"] .theme-toggle .icon-moon,
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+  /* Light theme: show moon, hide sun */
+  :root[data-theme="light"] .theme-toggle .icon-sun {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.5);
+  }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* ---------------- HERO STATS ---------------- */
+  .hero { margin-bottom: 32px; animation: fadeUp 0.7s ease-out 0.1s backwards; }
+  .hero-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+  .hero-amount {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(64px, 12vw, 128px);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    font-weight: 400;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .hero-amount .curr {
+    font-size: 0.4em;
+    color: var(--text-dim);
+    font-family: 'Geist Mono', monospace;
+    font-weight: 400;
+  }
+  .hero-amount .frac { font-size: 0.4em; color: var(--text-dim); }
+  .hero-amount.negative .main { color: var(--danger); }
+  .hero-amount.positive .main { color: var(--text); }
+
+  .hero-sub {
+    display: flex; gap: 24px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .hero-sub-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .hero-sub-item strong {
+    color: var(--text);
+    font-weight: 500;
+    font-family: 'Geist Mono', monospace;
+  }
+  .arrow-down { color: var(--danger); }
+  .arrow-up { color: var(--accent); }
+
+  /* ---------------- STAT CARDS ---------------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.7s ease-out 0.15s backwards;
+  }
+  @media (max-width: 700px) { .stats { grid-template-columns: 1fr; } }
+
+  .stat {
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s, background-color 0.25s;
+  }
+  .stat:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+  .stat::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  }
+  .stat-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .stat-name {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+  }
+  .stat-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    background: var(--surface-hover);
+    color: var(--text-dim);
+  }
+  .stat-icon svg { width: 14px; height: 14px; }
+  .stat-value {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px;
+    letter-spacing: -0.02em;
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.danger { color: var(--danger); }
+  .stat-foot {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-faint);
+    font-family: 'Geist Mono', monospace;
+  }
+
+  /* ---------------- MAIN GRID ---------------- */
+  .grid {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 14px;
+    animation: fadeUp 0.7s ease-out 0.2s backwards;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 24px;
+    font-style: italic;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+  .card-desc { font-size: 12px; color: var(--text-faint); margin-bottom: 24px; }
+
+  /* ---------------- FORM ---------------- */
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .field input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .field input::placeholder { color: var(--text-faint); }
+  .field input:focus {
+    border-color: var(--accent);
+    background: var(--input-focus-bg);
+  }
+  .field input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: var(--date-indicator-filter);
+    cursor: pointer;
+  }
+  .field input[type="number"] { font-family: 'Geist Mono', monospace; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .btn {
+    width: 100%;
+    margin-top: 8px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-family: 'Geist', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px;
+  }
+  .btn:hover:not(:disabled) { box-shadow: var(--shadow-glow); }
+  .btn:active:not(:disabled) { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn svg { width: 16px; height: 16px; }
+
+  .status {
+    margin-top: 12px;
+    font-size: 12px;
+    text-align: center;
+    min-height: 18px;
+    font-family: 'Geist Mono', monospace;
+  }
+  .status.ok { color: var(--accent); }
+  .status.err { color: var(--danger); }
+
+  .icon-btn {
+    background: var(--surface-hover);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { background: var(--surface); color: var(--text); border-color: var(--line-strong); }
+  .icon-btn svg { width: 14px; height: 14px; }
+  .icon-btn.spinning svg { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------------- LEDGER LIST ---------------- */
+  .card-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .ledger {
+    max-height: 500px;
+    overflow-y: auto;
+    margin: 0 -28px -28px;
+    padding: 0 28px 28px;
+  }
+  .ledger::-webkit-scrollbar { width: 6px; }
+  .ledger::-webkit-scrollbar-track { background: transparent; }
+  .ledger::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 3px; }
+
+  .ledger-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-faint);
+  }
+  .ledger-empty .big {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 28px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .entry {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+    animation: fadeIn 0.3s ease;
+  }
+  .entry:last-child { border-bottom: none; }
+
+  .entry-date {
+    width: 56px;
+    text-align: center;
+    padding: 8px 0;
+    background: var(--surface-hover);
+    border-radius: 10px;
+  }
+  .entry-date .day {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    line-height: 1;
+    display: block;
+    color: var(--text);
+  }
+  .entry-date .mon {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    margin-top: 2px;
+    display: block;
+  }
+  .entry-desc {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .entry-amt {
+    font-family: 'Geist Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--danger);
+    background: var(--danger-soft);
+    padding: 6px 12px;
+    border-radius: 8px;
+  }
+
+  /* ---------------- ANIMATIONS ---------------- */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ---------------- FOOTER ---------------- */
+  footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-faint);
+    font-family: 'Geist Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+  footer .accent { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-mark">L</div>
+      <div class="logo-text">Ledger<span>v2</span></div>
+    </div>
+    <div class="header-right">
+      <div class="date-pill">
+        <span class="dot"></span>
+        <span>Today · <strong id="todayLabel">—</strong></span>
+      </div>
+      <button id="themeToggle" class="theme-toggle" title="Toggle theme" aria-label="Toggle light/dark theme">
+        <!-- Sun icon (shown in dark mode = click to go light) -->
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+        <!-- Moon icon (shown in light mode = click to go dark) -->
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-label">Available balance</div>
+    <div class="hero-amount positive" id="heroAmount">
+      <span class="curr">$</span>
+      <span class="main"><span id="heroInt">0</span></span>
+      <span class="frac">.<span id="heroFrac">00</span></span>
+    </div>
+    <div class="hero-sub">
+      <div class="hero-sub-item">
+        <span class="arrow-down">↓</span>
+        Spent <strong id="heroTotal">$0.00</strong>
+      </div>
+      <div class="hero-sub-item">
+        <span>·</span>
+        <strong id="heroCount">0</strong> transactions
+      </div>
+      <div class="hero-sub-item" id="heroStatus">
+        <span style="color:var(--accent)">●</span>
+        Synced
+      </div>
+    </div>
+  </div>
+
+  <!-- STAT CARDS -->
+  <section class="stats">
+    <div class="stat">
+      <div class="stat-head">
+        <span class="stat-name">Budget set</span>
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+      </div>
+      <div class="stat-value accent">$<span id="statBudget">0</span></div>
+      <div class="stat-foot">Starting amount</div>
+    </div>
+    <div class="stat">
+      <div class="stat-head">
+        <span class="stat-name">Spent today</span>
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+        </div>
+      </div>
+      <div class="stat-value danger">$<span id="statToday">0</span></div>
+      <div class="stat-foot" id="statTodayFoot">No spending yet</div>
+    </div>
+    <div class="stat">
+      <div class="stat-head">
+        <span class="stat-name">This month</span>
+        <div class="stat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </div>
+      </div>
+      <div class="stat-value danger">$<span id="statMonth">0</span></div>
+      <div class="stat-foot" id="statMonthFoot">—</div>
+    </div>
+  </section>
+
+  <!-- MAIN GRID -->
+  <div class="grid">
+
+    <!-- ADD FORM -->
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">New entry</h2>
+          <p class="card-desc">Record a new expense</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="dateInput">Date</label>
+        <input id="dateInput" type="date" />
+      </div>
+
+      <div class="field">
+        <label for="descInput">Spent for</label>
+        <input id="descInput" type="text" placeholder="Coffee, groceries, taxi..." />
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="amountInput">Amount ($)</label>
+          <input id="amountInput" type="number" step="0.01" min="0" placeholder="0.00" />
+        </div>
+        <div class="field">
+          <label for="availInput">Set budget ($)</label>
+          <input id="availInput" type="number" step="0.01" placeholder="optional" />
+        </div>
+      </div>
+
+      <button id="submitBtn" class="btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Record expense
+      </button>
+      <div id="status" class="status"></div>
+    </section>
+
+    <!-- LEDGER -->
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Recent activity</h2>
+          <p class="card-desc" id="entriesSub">Loading from your sheet...</p>
+        </div>
+        <button id="refreshBtn" class="icon-btn" title="Refresh">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+        </button>
+      </div>
+      <div id="ledger" class="ledger">
+        <div class="ledger-empty">
+          <span class="big">Loading...</span>
+          Fetching entries from your sheet
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    Backed by Google Sheets · UI hosted on GitHub Pages · <span class="accent">v2</span>
+  </footer>
+
+</div>
+
+<script>
+  // ============ CONFIG ============
+  // Apps Script Web App URL — baked in.
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxw5CtKmP60qWdH08msuwjvSy5LTe5R73Mpr9TD6YcxydFfMOI9OCgz_jNClLInO7I4Aw/exec';
+
+  // ============ STATE ============
+  let entries = [];
+  let availableAmount = 0;
+
+  // ============ ELEMENTS ============
+  const dateInput   = document.getElementById('dateInput');
+  const descInput   = document.getElementById('descInput');
+  const amountInput = document.getElementById('amountInput');
+  const availInput  = document.getElementById('availInput');
+  const submitBtn   = document.getElementById('submitBtn');
+  const refreshBtn  = document.getElementById('refreshBtn');
+  const statusEl    = document.getElementById('status');
+  const ledgerEl    = document.getElementById('ledger');
+  const entriesSub  = document.getElementById('entriesSub');
+  const todayLabel  = document.getElementById('todayLabel');
+
+  const heroAmount = document.getElementById('heroAmount');
+  const heroInt    = document.getElementById('heroInt');
+  const heroFrac   = document.getElementById('heroFrac');
+  const heroTotal  = document.getElementById('heroTotal');
+  const heroCount  = document.getElementById('heroCount');
+  const heroStatus = document.getElementById('heroStatus');
+
+  const statBudget = document.getElementById('statBudget');
+  const statToday  = document.getElementById('statToday');
+  const statMonth  = document.getElementById('statMonth');
+  const statTodayFoot = document.getElementById('statTodayFoot');
+  const statMonthFoot = document.getElementById('statMonthFoot');
+
+  // ============ THEME ============
+  const THEME_KEY = 'ledger_theme_v1';
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    // Update phone status bar / address bar color
+    const themeColor = theme === 'light' ? '#f6f7f4' : '#0a0b10';
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute('content', themeColor));
+  }
+  function getInitialTheme() {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'light' || saved === 'dark') return saved;
+    // Fall back to system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      return 'light';
+    }
+    return 'dark';
+  }
+  // Apply ASAP before render to avoid flash
+  applyTheme(getInitialTheme());
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    localStorage.setItem(THEME_KEY, next);
+  }
+
+  // ============ INIT ============
+  function init() {
+    const now = new Date();
+    todayLabel.textContent = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    dateInput.value = now.toISOString().slice(0, 10);
+
+    refreshBtn.addEventListener('click', () => loadEntries(true));
+    submitBtn.addEventListener('click', submitEntry);
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+    [descInput, amountInput, availInput].forEach(el => {
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') submitEntry(); });
+    });
+
+    loadEntries();
+  }
+
+  function setStatus(msg, kind) {
+    statusEl.textContent = msg;
+    statusEl.className = 'status ' + (kind || '');
+    if (kind === 'ok') {
+      setTimeout(() => {
+        if (statusEl.textContent === msg) { statusEl.textContent = ''; statusEl.className = 'status'; }
+      }, 3000);
+    }
+  }
+
+  function setSyncStatus(state) {
+    if (state === 'syncing') {
+      heroStatus.innerHTML = '<span style="color:var(--warn)">●</span> Syncing...';
+    } else if (state === 'error') {
+      heroStatus.innerHTML = '<span style="color:var(--danger)">●</span> Offline';
+    } else {
+      heroStatus.innerHTML = '<span style="color:var(--accent)">●</span> Synced';
+    }
+  }
+
+  // ============ NETWORK ============
+  async function loadEntries(manual) {
+    setSyncStatus('syncing');
+    if (manual) refreshBtn.classList.add('spinning');
+    try {
+      const res = await fetch(API_URL + '?action=list', { method: 'GET' });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Load failed');
+      entries = data.entries || [];
+      availableAmount = Number(data.available || 0);
+      setSyncStatus('synced');
+      render();
+    } catch (e) {
+      setSyncStatus('error');
+      setStatus('Could not connect: ' + e.message, 'err');
+      ledgerEl.innerHTML = `
+        <div class="ledger-empty">
+          <span class="big">Connection failed</span>
+          Check that your Apps Script is deployed and accessible.
+        </div>`;
+    } finally {
+      if (manual) setTimeout(() => refreshBtn.classList.remove('spinning'), 400);
+    }
+  }
+
+  async function submitEntry() {
+    const date   = dateInput.value;
+    const desc   = descInput.value.trim();
+    const amount = parseFloat(amountInput.value);
+    const newAvail = availInput.value === '' ? null : parseFloat(availInput.value);
+
+    if (!date)            return setStatus('Pick a date', 'err');
+    if (!desc)            return setStatus('Describe what you spent on', 'err');
+    if (isNaN(amount) || amount <= 0) return setStatus('Enter a valid amount', 'err');
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg> Saving...';
+    setSyncStatus('syncing');
+
+    try {
+      const payload = { action: 'add', date, description: desc, amount };
+      if (newAvail !== null && !isNaN(newAvail)) payload.setAvailable = newAvail;
+
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Save failed');
+
+      descInput.value = '';
+      amountInput.value = '';
+      availInput.value = '';
+      setStatus('Saved ✓', 'ok');
+
+      entries = data.entries || entries;
+      availableAmount = Number(data.available || availableAmount);
+      setSyncStatus('synced');
+      render();
+    } catch (e) {
+      setSyncStatus('error');
+      setStatus('Save failed: ' + e.message, 'err');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Record expense';
+    }
+  }
+
+  // ============ RENDER ============
+  function render() {
+    const total = entries.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const remaining = availableAmount - total;
+
+    // Hero
+    const [intPart, fracPart] = Math.abs(remaining).toFixed(2).split('.');
+    heroInt.textContent = (remaining < 0 ? '−' : '') + Number(intPart).toLocaleString();
+    heroFrac.textContent = fracPart;
+    heroAmount.className = 'hero-amount ' + (remaining < 0 ? 'negative' : 'positive');
+
+    heroTotal.textContent = '$' + total.toFixed(2);
+    heroCount.textContent = entries.length;
+
+    statBudget.textContent = availableAmount.toFixed(2);
+
+    // Today stat
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayEntries = entries.filter(e => normalizeDate(e.date) === todayStr);
+    const todaySum = todayEntries.reduce((s, e) => s + Number(e.amount || 0), 0);
+    statToday.textContent = todaySum.toFixed(2);
+    statTodayFoot.textContent = todayEntries.length
+      ? `${todayEntries.length} transaction${todayEntries.length === 1 ? '' : 's'}`
+      : 'No spending yet';
+
+    // Month stat
+    const now = new Date();
+    const ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    const monthEntries = entries.filter(e => normalizeDate(e.date).startsWith(ym));
+    const monthSum = monthEntries.reduce((s, e) => s + Number(e.amount || 0), 0);
+    statMonth.textContent = monthSum.toFixed(2);
+    statMonthFoot.textContent = now.toLocaleDateString(undefined, { month: 'long' });
+
+    // Ledger
+    if (!entries.length) {
+      ledgerEl.innerHTML = `
+        <div class="ledger-empty">
+          <span class="big">No entries yet.</span>
+          Add your first expense to get started.
+        </div>`;
+      entriesSub.textContent = 'Your timeline will appear here';
+      return;
+    }
+
+    const sorted = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+    entriesSub.textContent = `${sorted.length} entr${sorted.length === 1 ? 'y' : 'ies'} · newest first`;
+
+    ledgerEl.innerHTML = sorted.map(e => {
+      const d = new Date(e.date);
+      const day = isNaN(d) ? '—' : d.getDate();
+      const mon = isNaN(d) ? '' : d.toLocaleDateString(undefined, { month: 'short' }).toUpperCase();
+      return `
+        <div class="entry">
+          <div class="entry-date">
+            <span class="day">${day}</span>
+            <span class="mon">${mon}</span>
+          </div>
+          <div class="entry-desc">${escapeHtml(e.description || '')}</div>
+          <div class="entry-amt">−$${Number(e.amount || 0).toFixed(2)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function normalizeDate(d) {
+    if (!d) return '';
+    if (typeof d === 'string') return d.slice(0, 10);
+    const dt = new Date(d);
+    return isNaN(dt) ? '' : dt.toISOString().slice(0, 10);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  init();
+</script>
+
+</body>
+</html>
