@@ -938,7 +938,7 @@
   function init() {
     const now = new Date();
     todayLabel.textContent = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    dateInput.value = now.toISOString().slice(0, 10);
+    dateInput.value = localDateString(now);
 
     refreshBtn.addEventListener('click', () => loadEntries(true));
     submitBtn.addEventListener('click', submitEntry);
@@ -1123,8 +1123,8 @@
 
     statBudget.textContent = availableAmount.toFixed(2);
 
-    // Today stat
-    const todayStr = new Date().toISOString().slice(0, 10);
+    // Today stat — use LOCAL date (not UTC) so it matches the user's timezone
+    const todayStr = localDateString(new Date());
     const todayEntries = entries.filter(e => normalizeDate(e.date) === todayStr);
     const todaySum = todayEntries.reduce((s, e) => s + Number(e.amount || 0), 0);
     statToday.textContent = todaySum.toFixed(2);
@@ -1171,11 +1171,25 @@
     }).join('');
   }
 
+  // Returns yyyy-MM-dd in LOCAL time, not UTC. Critical for users outside UTC.
+  function localDateString(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   function normalizeDate(d) {
     if (!d) return '';
-    if (typeof d === 'string') return d.slice(0, 10);
+    // String like "2026-05-16" or "2026-05-16T00:00:00.000Z"
+    if (typeof d === 'string') {
+      // If pure YYYY-MM-DD, use as is. If ISO timestamp, parse and convert to local date.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+      const dt = new Date(d);
+      return isNaN(dt) ? '' : localDateString(dt);
+    }
     const dt = new Date(d);
-    return isNaN(dt) ? '' : dt.toISOString().slice(0, 10);
+    return isNaN(dt) ? '' : localDateString(dt);
   }
 
   function escapeHtml(s) {
