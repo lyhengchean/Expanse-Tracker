@@ -1,6 +1,6 @@
 // ============ CONFIG ============
 // Apps Script Web App URL — baked in.
-const API_URL = 'https://script.google.com/macros/s/AKfycbxw5CtKmP60qWdH08msuwjvSy5LTe5R73Mpr9TD6YcxydFfMOI9OCgz_jNClLInO7I4Aw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbznKOjrO1Oai9Vy8IRbsaovMoZKuizWHP97doLXVlpUmvD8Y4k-zx0aRP-Gs53CtGv-qQ/exec';
 
 // ============ STATE ============
 let entries = [];
